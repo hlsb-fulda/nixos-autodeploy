@@ -3,38 +3,44 @@
 pkgs.nixosTest {
   name = "auto-deploy";
 
-  nodes.machine = { config, lib, pkgs, ... }: {
-    imports = [
-      flake.nixosModules.default
-    ];
+  nodes.machine =
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
+    {
+      imports = [ flake.nixosModules.default ];
 
-    system.autoDeploy = {
-      enable = true;
-      interval = "hourly";
+      system.autoDeploy = {
+        enable = true;
+        interval = "hourly";
 
-      # We use a flake wo can control via a symlink to simulate upstream changes
-      installable = "/tmp/upstream";
+        # We use a flake wo can control via a symlink to simulate upstream changes
+        installable = "/tmp/upstream";
 
-      prometheusFilePath = "/run/metrics/nixos-autodeploy.prom";
+        prometheusFilePath = "/run/metrics/nixos-autodeploy.prom";
+      };
+
+      services.prometheus.exporters.node = {
+        enable = true;
+        extraFlags = [ "--collector.textfile.directory=/run/metrics" ];
+      };
+
+      # Allow repeated start during tests
+      systemd.services.nixos-autodeploy = {
+        unitConfig.StartLimitIntervalSec = 0;
+      };
+
+      # Use specialisations to provide various system states to switch between
+      specialisation.next.configuration = {
+        environment.etc."test".text = "v1";
+      };
     };
 
-    services.prometheus.exporters.node = {
-      enable = true;
-      extraFlags = [ "--collector.textfile.directory=/run/metrics" ];
-    };
-
-    # Allow repeated start during tests
-    systemd.services.nixos-autodeploy = {
-      unitConfig.StartLimitIntervalSec = 0;
-    };
-
-    # Use specialisations to provide various system states to switch between
-    specialisation.next.configuration = {
-      environment.etc."test".text = "v1";
-    };
-  };
-
-  testScript = { nodes, ... }:
+  testScript =
+    { nodes, ... }:
     let
       base-system = nodes.machine.system.build.toplevel;
       next-system = nodes.machine.specialisation.next.configuration.system.build.toplevel;
@@ -135,4 +141,3 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
     '';
 }
-

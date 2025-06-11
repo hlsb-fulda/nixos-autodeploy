@@ -1,0 +1,35 @@
+name: Test the module
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check the module
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Configure Nix Cache
+        uses: DeterminateSystems/flakehub-cache-action@main
+
+      - name: Check Nixpkgs inputs
+        uses: DeterminateSystems/flake-checker-action@main
+        with:
+          fail-mode: true
+
+      - name: Check Formatting
+        run: nix fmt -- --ci
+      
+      - name: Test NixOS module
+        run: nix -L flake check
+

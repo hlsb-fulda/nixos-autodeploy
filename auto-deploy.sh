@@ -12,7 +12,7 @@ current_drv="$(readlink -f /run/current-system)"
 deployed_drv="$(readlink -f /run/deployed-system || echo "")"
 
 # Update upstream derivation and register as GC root
-upstream_drv="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths "${AUTODEPLOY_INSTALLABLE}")"
+upstream_drv="$(nix --refresh --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths "${AUTODEPLOY_INSTALLABLE}")"
 ln -sfT "${upstream_drv}" /run/upstream-system
 ln -sfT /run/upstream-system /nix/var/nix/gcroots/upstream-system
 

@@ -91,6 +91,8 @@ in
       after = [ "network-online.target" ];
       wants = [ "network-online.target" ];
 
+      # Do not restart the unit as it might be currently running the
+      # activation leading to the config change.
       restartIfChanged = false;
 
       environment = {
@@ -109,8 +111,13 @@ in
 
       wantedBy = [ "timers.target" ];
 
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+
       timerConfig = {
         OnCalendar = [ cfg.interval ];
+
+        OnStartupSec = "0sec";
 
         RandomizedDelaySec = cfg.randomizedDelay;
         FixedRandomDelay = true;

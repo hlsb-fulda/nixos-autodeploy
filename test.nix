@@ -51,6 +51,12 @@ pkgs.nixosTest {
     ''
       machine.wait_for_unit("nixos-autodeploy.timer")
 
+      with subtest("Service has started right after time"):
+        # The first run fails, because upstream is a missing link, but we check
+        # that the unit has run as it produced any kind of log
+        machine.sleep(5)
+        machine.succeed("journalctl -I -u nixos-autodeploy.service")
+
       with subtest("Missing state and same upstream"):
         machine.succeed("rm -f /run/deployed-system")
         machine.succeed("ln -sfT '${base-system}' /tmp/upstream")
@@ -123,6 +129,8 @@ pkgs.nixosTest {
       with subtest("Tracking state and differing upstream"):
         machine.succeed("ln -sfT '${base-system}' /run/deployed-system")
         machine.succeed("ln -sfT '${next-system}' /tmp/upstream")
+
+        machine.shell_interact()
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 

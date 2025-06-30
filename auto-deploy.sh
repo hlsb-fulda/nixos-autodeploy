@@ -20,6 +20,10 @@ ln -sfT /run/upstream-system /nix/var/nix/gcroots/upstream-system
 # from upstream, thus preventing automatic deployments
 dirty=0
 
+echo "🔍Current : ${current_drv}"
+echo "🔍Deployed: ${deployed_drv}"
+echo "🔍Upstream: ${upstream_drv}"
+
 # Do the automatic deployment
 # There are four states depending on the comparison of current, deployed and upstream derivations
 # | current == deployed | current == upstream | action             |

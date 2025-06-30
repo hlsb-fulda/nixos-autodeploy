@@ -125,5 +125,12 @@ in
         Persistent = true;
       };
     };
+
+    # Trigger a deployment run after activation
+    system.activationScripts.nixos-autodeploy = ''
+      if [ -d "/run/nixos" ]; then
+        echo "nixos-autodeploy.service" > /run/nixos/activation-restart-list
+      fi
+    '';
   };
 }

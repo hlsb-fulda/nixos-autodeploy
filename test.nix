@@ -18,10 +18,13 @@ pkgs.nixosTest {
         interval = "hourly";
 
         # We use a flake wo can control via a symlink to simulate upstream changes
-        installable = "/tmp/upstream";
+        installable = "/upstream";
 
         prometheusFilePath = "/run/metrics/nixos-autodeploy.prom";
       };
+
+      # To make `switch-to-configuration switch` work
+      virtualisation.useBootLoader = true;
 
       services.prometheus.exporters.node = {
         enable = true;
@@ -54,12 +57,15 @@ pkgs.nixosTest {
       with subtest("Service has started right after time"):
         # The first run fails, because upstream is a missing link, but we check
         # that the unit has run as it produced any kind of log
-        machine.sleep(5)
+        machine.sleep(3)
         machine.succeed("journalctl -I -u nixos-autodeploy.service")
 
       with subtest("Missing state and same upstream"):
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
+
         machine.succeed("rm -f /run/deployed-system")
-        machine.succeed("ln -sfT '${base-system}' /tmp/upstream")
+        machine.succeed("ln -sfvnT '${base-system}' /upstream")
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
@@ -72,8 +78,11 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
 
       with subtest("Missing state and differing upstream"):
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
+
         machine.succeed("rm -f /run/deployed-system")
-        machine.succeed("ln -sfT '${next-system}' /tmp/upstream")
+        machine.succeed("ln -sfvnT '${next-system}' /upstream")
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
@@ -85,8 +94,11 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 1'")
 
       with subtest("Differing state and same upstream"):
-        machine.succeed("ln -sfT '${next-system}' /run/deployed-system")
-        machine.succeed("ln -sfT '${base-system}' /tmp/upstream")
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
+
+        machine.succeed("ln -sfvnT '${next-system}' /run/deployed-system")
+        machine.succeed("ln -sfvnT '${base-system}' /upstream")
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
@@ -99,8 +111,11 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
 
       with subtest("Differing state and differing upstream"):
-        machine.succeed("ln -sfT '${next-system}' /run/deployed-system")
-        machine.succeed("ln -sfT '${next-system}' /tmp/upstream")
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
+
+        machine.succeed("ln -sfvnT '${next-system}' /run/deployed-system")
+        machine.succeed("ln -sfvnT '${next-system}' /upstream")
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
@@ -116,8 +131,11 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 1'")
 
       with subtest("Tracking state and same upstream"):
-        machine.succeed("ln -sfT '${base-system}' /run/deployed-system")
-        machine.succeed("ln -sfT '${base-system}' /tmp/upstream")
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
+
+        machine.succeed("ln -sfvnT '${base-system}' /run/deployed-system")
+        machine.succeed("ln -sfvnT '${base-system}' /upstream")
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
@@ -127,10 +145,11 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
 
       with subtest("Tracking state and differing upstream"):
-        machine.succeed("ln -sfT '${base-system}' /run/deployed-system")
-        machine.succeed("ln -sfT '${next-system}' /tmp/upstream")
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
 
-        machine.shell_interact()
+        machine.succeed("ln -sfvnT '${base-system}' /run/deployed-system")
+        machine.succeed("ln -sfvnT '${next-system}' /upstream")
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
@@ -143,9 +162,27 @@ pkgs.nixosTest {
         current = machine.succeed("readlink -f /run/current-system").strip()
         assert current == "${next-system}"
 
-        # Reset back to base system
-        machine.succeed("${base-system}/bin/switch-to-configuration test")
-
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
+
+        # Reset back to base system
+        machine.succeed("${base-system}/bin/switch-to-configuration switch")
+
+      with subtest("Manual Deployment triggers run"):
+        current = machine.succeed("readlink -f /run/current-system").strip()
+        assert current == "${base-system}"
+
+        machine.succeed("ln -sfvnT '${base-system}' /run/deployed-system")
+        machine.succeed("ln -sfvnT '${base-system}' /upstream")
+
+        machine.succeed("${next-system}/bin/switch-to-configuration switch")
+
+        # Manually activating system should trigger the script
+        output = machine.succeed("journalctl -I -u nixos-autodeploy.service -o cat")
+        assert "Current system has been deployed manually" in output
+
+        machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 1'")
+
+        # Reset back to base system
+        machine.succeed("${base-system}/bin/switch-to-configuration switch")
     '';
 }

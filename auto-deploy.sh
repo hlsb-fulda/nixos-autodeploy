@@ -2,19 +2,18 @@
 
 set -euo pipefail
 
-if [ -z "${AUTODEPLOY_INSTALLABLE:-}" ]; then
-  echo "AUTODEPLOY_INSTALLABLE not set">&2
+if [ -z "${1}" ]; then
+  echo "Usage: ${0} <upstream>"
   exit 1
 fi
 
-# Read in current state
-current_drv="$(readlink -f /run/current-system)"
-deployed_drv="$(readlink -f /run/deployed-system || echo "")"
+# Realize the upstream derivation and register it GC root
+upstream_drv="$(nix-store --realize "${1}" --add-root /run/upstream-system)"
+upstream_drv="$(realpath -e "${upstream_drv}")"
 
-# Update upstream derivation and register as GC root
-upstream_drv="$(nix --refresh --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths "${AUTODEPLOY_INSTALLABLE}")"
-ln -sfT "${upstream_drv}" /run/upstream-system
-ln -sfT /run/upstream-system /nix/var/nix/gcroots/upstream-system
+# Read in current state
+current_drv="$(realpath -e /run/current-system)"
+deployed_drv="$(realpath -e /run/deployed-system || echo "")"
 
 # The dirty state tracks, if the system has been deployed manually and differs
 # from upstream, thus preventing automatic deployments
@@ -61,7 +60,7 @@ fi
 
 # Check if the system needs a reboot for full update
 reboot_required=0
-if [ "$(readlink /run/booted-system/{initrd,kernel,kernel-modules})" != "$(readlink /run/current-system/{initrd,kernel,kernel-modules})" ]; then
+if [ "$(realpath -e /run/booted-system/{initrd,kernel,kernel-modules})" != "$(readlink /run/current-system/{initrd,kernel,kernel-modules})" ]; then
   echo "⏳Reboot required"
   reboot_required=1
 fi

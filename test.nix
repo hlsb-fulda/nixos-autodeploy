@@ -18,7 +18,9 @@ pkgs.nixosTest {
         interval = "hourly";
 
         # We use a flake wo can control via a symlink to simulate upstream changes
-        installable = "/upstream";
+        fetch = pkgs.writers.writeBash "fetch" ''
+          realpath -e /upstream
+        '';
 
         prometheusFilePath = "/run/metrics/nixos-autodeploy.prom";
       };
@@ -61,7 +63,7 @@ pkgs.nixosTest {
         machine.succeed("journalctl -I -u nixos-autodeploy.service")
 
       with subtest("Missing state and same upstream"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("rm -f /run/deployed-system")
@@ -69,16 +71,18 @@ pkgs.nixosTest {
 
         machine.succeed("systemctl start --wait nixos-autodeploy.service")
 
+        machine.shell_interact()
+
         output = machine.succeed("journalctl -I -u nixos-autodeploy.service -o cat")
         assert "Current system matches upstream" in output
 
-        deployed = machine.succeed("readlink -f /run/deployed-system").strip()
+        deployed = machine.succeed("realpath -e /run/deployed-system").strip()
         assert deployed == "${base-system}"
 
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
 
       with subtest("Missing state and differing upstream"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("rm -f /run/deployed-system")
@@ -94,7 +98,7 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 1'")
 
       with subtest("Differing state and same upstream"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("ln -sfvnT '${next-system}' /run/deployed-system")
@@ -105,13 +109,13 @@ pkgs.nixosTest {
         output = machine.succeed("journalctl -I -u nixos-autodeploy.service -o cat")
         assert "Current system matches upstream" in output
 
-        deployed = machine.succeed("readlink -f /run/deployed-system").strip()
+        deployed = machine.succeed("realpath -e /run/deployed-system").strip()
         assert deployed == "${base-system}"
 
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
 
       with subtest("Differing state and differing upstream"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("ln -sfvnT '${next-system}' /run/deployed-system")
@@ -122,16 +126,16 @@ pkgs.nixosTest {
         output = machine.succeed("journalctl -I -u nixos-autodeploy.service -o cat")
         assert "Current system has been deployed manually" in output
 
-        deployed = machine.succeed("readlink -f /run/deployed-system").strip()
+        deployed = machine.succeed("realpath -e /run/deployed-system").strip()
         assert deployed == "${next-system}"
 
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 1'")
 
       with subtest("Tracking state and same upstream"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("ln -sfvnT '${base-system}' /run/deployed-system")
@@ -145,7 +149,7 @@ pkgs.nixosTest {
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
 
       with subtest("Tracking state and differing upstream"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("ln -sfvnT '${base-system}' /run/deployed-system")
@@ -156,10 +160,10 @@ pkgs.nixosTest {
         output = machine.succeed("journalctl -I -u nixos-autodeploy.service -o cat")
         assert "Current system differs from upstream" in output
 
-        deployed = machine.succeed("readlink -f /run/deployed-system").strip()
+        deployed = machine.succeed("realpath -e /run/deployed-system").strip()
         assert deployed == "${next-system}"
 
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${next-system}"
 
         machine.succeed("curl -s ${pne} | grep 'nixos_autodeploy_dirty 0'")
@@ -168,7 +172,7 @@ pkgs.nixosTest {
         machine.succeed("${base-system}/bin/switch-to-configuration switch")
 
       with subtest("Manual Deployment triggers run"):
-        current = machine.succeed("readlink -f /run/current-system").strip()
+        current = machine.succeed("realpath -e /run/current-system").strip()
         assert current == "${base-system}"
 
         machine.succeed("ln -sfvnT '${base-system}' /run/deployed-system")

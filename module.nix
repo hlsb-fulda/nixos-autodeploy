@@ -20,12 +20,19 @@ let
   script = pkgs.writeShellApplication {
     name = "nixos-auto-deploy";
     runtimeInputs = with pkgs; [
+      bash
       coreutils
       moreutils
       nix
       systemd
     ];
-    text = builtins.readFile ./auto-deploy.sh;
+    text = ''
+      # Fetch upstream
+      read -r upstream < <('${cfg.fetch}')
+
+      # Run deployment
+      '${./auto-deploy.sh}' "$upstream"
+    '';
   };
 
 in
@@ -33,22 +40,22 @@ in
   options.system.autoDeploy = {
     enable = mkEnableOption "Automatic NixOS system deployments";
 
-    installable = mkOption {
-      type = types.str;
+    fetch = mkOption {
+      type = types.path;
       description = ''
-        The system installable to track and deploy.
-      '';
-      default = "${cfg.flake}#nixosConfigurations.${config.networking.hostName}.config.system.build.toplevel";
-      defaultText = literalExpression "\${config.system.autodeploy.flake}#nixosConfigurations.\${config.networking.hostName}.config.system.build.toplevel";
-      example = "github:fooker/nixcfg#colmenaHive.nodes.mynode.config.specialisation.example.config.system.build.toplevel";
-    };
+        Command executed to determine the upstream system derivation path.
 
-    flake = mkOption {
-      type = types.str;
-      example = "github:kloenk/nix";
-      description = ''
-        The Flake URI of the NixOS configuration to deploy.
-        Only used if `system.autodeploy.installable` is not set.
+        The command should print a single line with the outpath of the upstream system derivation.
+        A non-zero exit code is considered an error and the update will be aborted.
+      '';
+      example = literalExpression ''
+        pkgs.writers.writeBash "fetch" ''''
+          nix \
+            --refresh build \
+            --no-link \
+            --print-out-paths \
+            github:hlsb-fulda/nixos-infra#nixosConfigurations.''${config.networking.hostName}.config.system.build.toplevel
+        ''''
       '';
     };
 
@@ -96,7 +103,6 @@ in
       restartIfChanged = false;
 
       environment = {
-        AUTODEPLOY_INSTALLABLE = cfg.installable;
         AUTODEPLOY_PROM_PATH = cfg.prometheusFilePath;
       };
 

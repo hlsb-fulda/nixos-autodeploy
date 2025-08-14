@@ -30,13 +30,19 @@ This module provides:
         system = "x86_64-linux";
         modules = [
           autodeploy.nixosModules.default
-          {
+          ({ pkgs, config, ... }: {
             system.autoDeploy = {
               enable = true;
-              flake = "github:yourorg/yourflake";
+              fetch = pkgs.writers.writeBash "fetch" ''
+                nix \
+                    --refresh build \
+                    --no-link \
+                    --print-out-paths \
+                    github:your-org/nixos-infra#nixosConfigurations.${config.networking.hostName}.config.system.build.toplevel
+              '';
               interval = "15min";
             };
-          }
+          })
         ];
       };
     };

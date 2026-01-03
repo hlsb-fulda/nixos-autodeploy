@@ -1,0 +1,49 @@
+[package]
+name = "nixos-autodeploy"
+description = "A robust NixOS system auto-deployment"
+version = "0.1.0"
+edition = "2024"
+
+authors = [
+    "Dustin Frisch <fooker@lab.sh>",
+]
+
+license = "MIT"
+
+[dependencies]
+color-eyre = "0.6.5"
+
+clap = { version = "4.5.51", features = ["derive"] }
+
+reqwest = { version = "0.13.1", features = ["blocking"] }
+
+url = "2.5.7"
+itertools = "0.14.0"
+
+prometheus = "0.14.0"
+
+[lints.rust]
+bad_style = "deny"
+dead_code = "deny"
+improper_ctypes = "deny"
+non_shorthand_field_patterns = "deny"
+no_mangle_generic_items = "deny"
+overflowing_literals = "deny"
+path_statements = "deny"
+patterns_in_fns_without_body = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unconditional_recursion = "deny"
+unused = "deny"
+unused_allocation = "deny"
+unused_comparisons = "deny"
+unused_extern_crates = "deny"
+unused_import_braces = "deny"
+unused_parens = "deny"
+unused_qualifications = "deny"
+while_true = "deny"
+
+incomplete_features = { level = "allow", priority = -1 }
+
+[lints.clippy]
+needless_return = "allow"

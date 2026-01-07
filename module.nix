@@ -68,7 +68,7 @@ in
         Add a randomized delay before each automatic upgrade.
         The delay will be chosen between zero and this value.
         This value must be a time span in the format specified by
-        {manpage}`systemd.time(7)`
+        {manpage}`systemd.time(7)`.
       '';
     };
 
@@ -95,6 +95,9 @@ in
       type = types.nullOr types.str;
       default = null;
       example = "/var/lib/prometheus-node-exporter/text-files/nixos-autodeploy.prom";
+      description = ''
+        If not `null`, write prometheus metrics to this path.
+      '';
     };
   };
 

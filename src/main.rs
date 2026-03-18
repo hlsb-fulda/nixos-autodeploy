@@ -12,10 +12,10 @@ mod cli;
 mod exec;
 mod metrics;
 
-const RUN_UPSTREAM_SYSTEM: &'static str = "/run/upstream-system";
-const RUN_DEPLOYED_SYSTEM: &'static str = "/run/deployed-system";
-const RUN_CURRENT_SYSTEM: &'static str = "/run/current-system";
-const RUN_BOOTED_SYSTEM: &'static str = "/run/booted-system";
+const RUN_UPSTREAM_SYSTEM: &str = "/run/upstream-system";
+const RUN_DEPLOYED_SYSTEM: &str = "/run/deployed-system";
+const RUN_CURRENT_SYSTEM: &str = "/run/current-system";
+const RUN_BOOTED_SYSTEM: &str = "/run/booted-system";
 
 fn main() -> Result<()> {
     color_eyre::install()?;
@@ -144,16 +144,14 @@ fn main() -> Result<()> {
                 cmd.capture_stdout()?;
             }
         }
+    } else if current_drv == upstream_drv {
+        println!(
+            "Current system matches upstream - start tracking upstream by syncing deployed state"
+        );
+        symlink(RUN_DEPLOYED_SYSTEM, &current_drv)?;
     } else {
-        if current_drv == upstream_drv {
-            println!(
-                "Current system matches upstream - start tracking upstream by syncing deployed state"
-            );
-            symlink(RUN_DEPLOYED_SYSTEM, &current_drv)?;
-        } else {
-            println!("Current system has been deployed manually - skipping deployment");
-            state.dirty = true;
-        }
+        println!("Current system has been deployed manually - skipping deployment");
+        state.dirty = true;
     }
 
     if state.reboot_pending {
@@ -198,7 +196,7 @@ fn symlink(path: impl AsRef<Path>, target: impl AsRef<Path>) -> Result<()> {
         .with_context(|| format!("Failed to create symlink: {}", tmp.display()))?;
 
     // Move temporary to final path
-    std::fs::rename(&tmp, &path).with_context(|| {
+    std::fs::rename(&tmp, path).with_context(|| {
         format!(
             "Failed to rename symlink: {} -> {}",
             tmp.display(),

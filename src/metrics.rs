@@ -1,12 +1,13 @@
 use crate::{
-    resolve, RUN_BOOTED_SYSTEM, RUN_CURRENT_SYSTEM, RUN_DEPLOYED_SYSTEM, RUN_UPSTREAM_SYSTEM,
+    RUN_BOOTED_SYSTEM, RUN_CURRENT_SYSTEM, RUN_DEPLOYED_SYSTEM, RUN_UPSTREAM_SYSTEM, resolve,
 };
-use color_eyre::eyre::Context;
 use color_eyre::Result;
+use color_eyre::eyre::Context;
 use prometheus::proto::{Gauge, LabelPair, Metric, MetricFamily, MetricType};
 use prometheus::{Encoder, TextEncoder};
 use std::path::Path;
 
+#[derive(Default)]
 pub struct State {
     // The dirty state tracks, if the system has been deployed manually and differs from upstream,
     // thus preventing automatic deployments
@@ -16,14 +17,6 @@ pub struct State {
     pub reboot_pending: bool,
 }
 
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            dirty: false,
-            reboot_pending: false,
-        }
-    }
-}
 
 impl State {
     pub fn write_metrics(self, path: &Path) -> Result<()> {
@@ -109,7 +102,7 @@ impl State {
             &mut buffer,
         )?;
 
-        std::fs::write(&path, &buffer).with_context(|| {
+        std::fs::write(path, &buffer).with_context(|| {
             format!(
                 "Failed to write prometheus metrics: {path}",
                 path = path.display()

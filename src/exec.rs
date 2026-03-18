@@ -1,5 +1,5 @@
-use color_eyre::eyre::eyre;
 use color_eyre::Result;
+use color_eyre::eyre::eyre;
 use itertools::Itertools;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
@@ -35,7 +35,10 @@ impl CommandExt for Command {
             // We assume a human-readable error message here
             let out = String::from_utf8_lossy(&child.stdout);
             let err = String::from_utf8_lossy(&child.stderr);
-            return Err(eyre!("Executing command '{cmd}' ({status}):\n{out}\n{err}", status = child.status));
+            return Err(eyre!(
+                "Executing command '{cmd}' ({status}):\n{out}\n{err}",
+                status = child.status
+            ));
         }
 
         Ok(child.stdout)

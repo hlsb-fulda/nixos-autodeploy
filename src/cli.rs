@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use clap::{Parser, ValueEnum};
+use std::path::PathBuf;
 use url::Url;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -39,11 +39,7 @@ pub struct Args {
     )]
     pub switch_mode: SwitchMode,
 
-    #[arg(
-        long,
-        short,
-        help = "How to reboot the system if required",
-    )]
+    #[arg(long, short, help = "How to reboot the system if required")]
     pub reboot_mode: Option<RebootMode>,
 
     #[arg(value_name = "URL", help = "URL to fetch the latest manifest from")]

@@ -2,8 +2,9 @@ use crate::cli::{Args, RebootMode, SwitchMode};
 use crate::exec::CommandExt;
 use crate::metrics::State;
 use clap::Parser;
-use color_eyre::eyre::{eyre, Context, ContextCompat};
 use color_eyre::Result;
+use color_eyre::eyre::{Context, ContextCompat, eyre};
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -64,7 +65,7 @@ fn main() -> Result<()> {
     if let Some(ref deployed_drv) = deployed_drv {
         println!("Deployed: {deployed}", deployed = deployed_drv.display());
     } else {
-        println!("Deployed unknown");
+        println!("Deployed: unknown");
     }
 
     // Track the state of the process
@@ -183,14 +184,27 @@ fn resolve(path: impl AsRef<Path>) -> Result<Option<PathBuf>> {
 
 fn symlink(path: impl AsRef<Path>, target: impl AsRef<Path>) -> Result<()> {
     let path = path.as_ref();
+    let target = target.as_ref();
 
-    if std::fs::exists(path)? {
-        std::fs::remove_file(path)
-            .with_context(|| format!("Failed to delete symlink: {}", path.display()))?;
-    }
+    // Hash the target to create a unique temporary path
+    let mut hash = DefaultHasher::new();
+    target.hash(&mut hash);
+    let hash = hash.finish();
 
-    std::os::unix::fs::symlink(target, path)
-        .with_context(|| format!("Failed to create symlink: {}", path.display()))?;
+    let tmp = path.with_added_extension(format!("tmp.{hash:08x}"));
+
+    // Create symlink to temporary
+    std::os::unix::fs::symlink(target, &tmp)
+        .with_context(|| format!("Failed to create symlink: {}", tmp.display()))?;
+
+    // Move temporary to final path
+    std::fs::rename(&tmp, &path).with_context(|| {
+        format!(
+            "Failed to rename symlink: {} -> {}",
+            tmp.display(),
+            path.display()
+        )
+    })?;
 
     Ok(())
 }

@@ -25,11 +25,11 @@ in
     enable = mkEnableOption "Automatic NixOS system deployments";
 
     package = mkOption {
-        type = types.package;
-        description = ''
-          The nixos-autodeployment package to use.
-        '';
-        default = pkgs.callPackage ./package.nix { };
+      type = types.package;
+      description = ''
+        The nixos-autodeployment package to use.
+      '';
+      default = pkgs.callPackage ./package.nix { };
     };
 
     url = mkOption {
@@ -73,7 +73,11 @@ in
     };
 
     switchMode = mkOption {
-      type = types.enum [ "switch" "boot" "smart" ];
+      type = types.enum [
+        "switch"
+        "boot"
+        "smart"
+      ];
       default = "switch";
       description = ''
         Determines how to switch to updated configuration.
@@ -84,11 +88,14 @@ in
     };
 
     rebootMode = mkOption {
-        type = types.nullOr types.enum [ "reboot" "kexec" ];
-        default = null;
-        description = ''
-          If not `null`, reboot the system automatically whenever required to apply the update.
-        '';
+      type = types.nullOr types.enum [
+        "reboot"
+        "kexec"
+      ];
+      default = null;
+      description = ''
+        If not `null`, reboot the system automatically whenever required to apply the update.
+      '';
     };
 
     prometheusFilePath = mkOption {

@@ -17,7 +17,6 @@ pub struct State {
     pub reboot_pending: bool,
 }
 
-
 impl State {
     pub fn write_metrics(self, path: &Path) -> Result<()> {
         fn generation_label(name: &str, path: impl AsRef<Path>) -> Result<Option<LabelPair>> {

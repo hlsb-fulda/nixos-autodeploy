@@ -1,12 +1,12 @@
 {
-    lib,
-    rustPlatform,
-    pkg-config,
-    makeWrapper,
-    openssl,
-    nix,
-    systemd,
-    ...
+  lib,
+  rustPlatform,
+  pkg-config,
+  makeWrapper,
+  openssl,
+  nix,
+  systemd,
+  ...
 }:
 
 rustPlatform.buildRustPackage rec {
@@ -14,9 +14,23 @@ rustPlatform.buildRustPackage rec {
   version = "0.1.0";
 
   src = lib.cleanSourceWith {
-    filter = name: type:
-        !(type == "directory" && builtins.elem (baseNameOf name) [ "target" ".idea" ".direnv" ]) &&
-        !(builtins.elem (baseNameOf name) [ "flake.nix" "flake.lock" "module.nix" "package.nix" "test.nix" ]);
+    filter =
+      name: type:
+      !(
+        type == "directory"
+        && builtins.elem (baseNameOf name) [
+          "target"
+          ".idea"
+          ".direnv"
+        ]
+      )
+      && !(builtins.elem (baseNameOf name) [
+        "flake.nix"
+        "flake.lock"
+        "module.nix"
+        "package.nix"
+        "test.nix"
+      ]);
     src = lib.cleanSource ./.;
   };
 
@@ -27,7 +41,7 @@ rustPlatform.buildRustPackage rec {
 
   buildInputs = [
     openssl.dev
-   ];
+  ];
 
   cargoLock = {
     lockFile = ./Cargo.lock;
@@ -35,7 +49,12 @@ rustPlatform.buildRustPackage rec {
 
   postInstall = ''
     wrapProgram $out/bin/nixos-autodeploy \
-        --prefix PATH : ${lib.makeBinPath [ nix systemd ]}
+        --prefix PATH : ${
+          lib.makeBinPath [
+            nix
+            systemd
+          ]
+        }
   '';
 
   meta = with lib; {
